@@ -41,4 +41,23 @@ let cust=col('customer'),cm=col(norm($('customerMetric').value));if(cust&&cm)tab
 let miss=view.filter(r=>headers.some(h=>!String(r[h]??'').trim())).length,seen=new Set,dups=0;view.forEach(r=>{let k=headers.map(h=>r[h]??'').join('\u001f');if(seen.has(k))dups++;seen.add(k)});let bad=dc?view.filter(r=>!dateOf(r[dc])).length:view.length;$('missing').textContent=fmt(miss);$('duplicates').textContent=fmt(dups);$('badDates').textContent=fmt(bad);$('qualityBadge').textContent='Checks complete';$('qualityDetails').innerHTML='<ul class="small"><li>'+miss+' rows contain blank cells.</li><li>'+dups+' exact duplicate rows detected.</li><li>'+bad+' missing or invalid order dates.</li><li>Checks do not alter your source file.</li></ul>';dataTable();$('export').disabled=false;msg('Loaded '+raw.length.toLocaleString()+' rows. Available charts and findings use your CSV.','good')}
 $('load').onclick=async()=>{let f=$('file').files[0];if(!f){msg('Choose a CSV file first. In Excel use File → Save As → CSV UTF-8.');return}try{let d=parseCSV(await f.text());if(d.length<2)throw Error('No data rows found');headers=d[0].map((h,i)=>i===0?h.replace(/^\uFEFF/,'').trim():h.trim());raw=d.slice(1).map(row=>Object.fromEntries(headers.map((h,i)=>[h,(row[i]??'').trim()])));setup();run()}catch(e){msg('Could not read CSV: '+e.message,'bad')}};
 ['from','to','region','category','segment','ship','metric','dimension','rankMetric','customerMetric'].forEach(id=>$(id).onchange=()=>{if(raw.length)run()});$('search').oninput=()=>{if(raw.length)dataTable()};$('reset').onclick=()=>{['from','to','region','category','segment','ship'].forEach(id=>$(id).value='');$('search').value='';if(raw.length)run()};$('export').onclick=()=>{let rows=[headers,...view.map(r=>headers.map(h=>r[h]??''))],csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='retail_filtered_data.csv';a.click();URL.revokeObjectURL(url)};document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>{document.querySelectorAll('.nav a').forEach(x=>x.classList.remove('active'));a.classList.add('active')});
+// Automatically load the superstore data on page startup
+window.addEventListener('DOMContentLoaded', () => {
+    fetch('superstore.csv')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Local CSV file not found on server");
+            }
+            return response.text();
+        })
+        .then(csvText => {
+            if (typeof processData === 'function') {
+                processData(csvText);
+            } else if (typeof handleCSVData === 'function') {
+                handleCSVData(csvText);
+            }
+            console.log("Superstore data auto-loaded successfully!");
+        })
+        .catch(err => console.log("Waiting for manual upload or:", err.message));
+});
 </script></body></html>
